@@ -46,7 +46,7 @@ BPL_EVM_ProxyCallbacks_t * BPL_EVM_GetAPIFromRouteTbl(bplib_routetbl_t * routetb
         }
         else
         {
-            EVM_API = this->admin_block.u.admin.EVM_API;
+            EVM_API = routetbl->admin_block.u.admin.EVM_API;
         }
     }
 
