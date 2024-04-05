@@ -31,6 +31,7 @@
 #include "v7_mpool_bblocks.h"
 #include "v7_mpool_flows.h"
 #include "v7_mpool_ref.h"
+#include "bpl_evm_api.h"
 
 /*
  * Minimum size of a generic data block
@@ -124,6 +125,8 @@ typedef struct bplib_mpool_block_admin_content
      * is not used for these, because the push_count and pull_count would not remain accurate. */
 
     bplib_mpool_block_t active_list; /**< a list of flows/queues that need processing */
+
+    BPL_EVM_ProxyCallbacks_t evm_api;
 
 } bplib_mpool_block_admin_content_t;
 

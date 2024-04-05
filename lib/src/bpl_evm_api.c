@@ -8,7 +8,10 @@
 
 #include <stdarg.h>
 #include "cfe.h"
+#include "bplib_api_types.h"
+#include "bplib_routing.h"
 #include "bpl_evm_api.h"
+//#include "v7_mpool_internal.h"
 
 /******************************************************************************
  TYPEDEFS
@@ -19,18 +22,83 @@
  LOCAL DATA
  ******************************************************************************/
 
-BPL_EVM_ProxyCallbacks_t BPL_EVM_ProxyCallbacks;
+// BPL_EVM_ProxyCallbacks_t BPL_EVM_ProxyCallbacks;
 
 /******************************************************************************
  LOCAL FUNCTIONS
  ******************************************************************************/
 
-BPL_Status_t BPL_EVM_Initialize(BPL_EVM_ProxyCallbacks_t ProxyCallbacks)
+BPL_EVM_ProxyCallbacks_t * BPL_EVM_GetAPIFromRouteTbl(bplib_routetbl_t * routetbl)
+{
+    BPL_EVM_ProxyCallbacks_t * EVM_API;
+    bplib_mpool_t * mpool;
+
+    if (routetbl == NULL)
+    {
+        EVM_API = NULL;
+    }
+    else
+    {
+        mpool = bplib_route_get_mpool(routetbl);
+        if (mpool == NULL)
+        {
+            EVM_API = NULL;
+        }
+        else
+        {
+            EVM_API = this->admin_block.u.admin.EVM_API;
+        }
+    }
+
+    return EVM_API;
+}
+
+/*
+** Helper function to find/return the EVM API Proxy Callback struct from inside the mempool
+*/
+BPL_EVM_ProxyCallbacks_t * BPL_EVM_GetAPI(bplib_mpool_t const * this)
+{
+    BPL_EVM_ProxyCallbacks_t * EVM_API;
+    if (this == NULL)
+    {
+        EVM_API = NULL;
+    }
+    else
+    {
+        EVM_API = this->admin_block.u.admin.EVM_API;
+    }
+    return EVM_API;
+}
+
+bool BPL_EVM_IsValidAPI(BPL_EVM_ProxyCallbacks_t const * api)
+{
+    bool IsValid;
+    if (api == NULL)
+    {
+        IsValid = false;
+    }
+    else if (api->Initialize_Impl == NULL)
+    {
+        IsValid = false;
+    }
+    else if (api->SendEvent_Impl == NULL)
+    {
+        IsValid = false;
+    }
+    else
+    {
+        IsValid = true;
+    }
+    return IsValid;
+}
+
+BPL_Status_t BPL_EVM_Initialize(bplib_mpool_t * this, BPL_EVM_ProxyCallbacks_t ProxyCallbacks)
 {
     BPL_Status_t ReturnStatus;
     BPL_Status_t ProxyInitImplReturnStatus;
+    BPL_EVM_ProxyCallbacks_t * EVM_API = BPL_EVM_GetAPI(this);
 
-    if ((ProxyCallbacks.Initialize_Impl == NULL) || (ProxyCallbacks.SendEvent_Impl == NULL))
+    if (BPL_EVM_IsValidAPI(EVM_API) || BPL_EVM_IsValidAPI(&ProxyCallbacks))
     {
         ReturnStatus.ReturnValue = BPL_STATUS_ERROR_INPUT_INVALID;
         OS_printf("BPL_EVM_Initialize got an invalid argument!\n");
@@ -38,11 +106,11 @@ BPL_Status_t BPL_EVM_Initialize(BPL_EVM_ProxyCallbacks_t ProxyCallbacks)
     else
     {
         /* impl callbacks determined to be valid */
-        BPL_EVM_ProxyCallbacks.Initialize_Impl = ProxyCallbacks.Initialize_Impl;
-        BPL_EVM_ProxyCallbacks.SendEvent_Impl = ProxyCallbacks.SendEvent_Impl;
+        EVM_API->Initialize_Impl = ProxyCallbacks.Initialize_Impl;
+        EVM_API->SendEvent_Impl = ProxyCallbacks.SendEvent_Impl;
 
         /* TODO: immediately want to call the proxy init, or wait for a directive to do so? */
-        ProxyInitImplReturnStatus = BPL_EVM_ProxyCallbacks.Initialize_Impl();
+        ProxyInitImplReturnStatus = EVM_API->Initialize_Impl();
         if (ProxyInitImplReturnStatus.ReturnValue != BPL_STATUS_SUCCESS)
         {
             ReturnStatus.ReturnValue = BPL_STATUS_ERROR_PROXY_INIT;
@@ -88,14 +156,15 @@ char const * BPL_EVM_EventTypeToString(BPL_EVM_EventType_t Type)
     }
 }
 
-BPL_Status_t BPL_EVM_SendEvent(uint16_t EventID, BPL_EVM_EventType_t EventType,
+BPL_Status_t BPL_EVM_SendEvent(bplib_mpool_t * this, uint16_t EventID, BPL_EVM_EventType_t EventType,
     char const * EventText, ...)
 {
     BPL_Status_t ReturnStatus;
     BPL_Status_t ProxyReturnStatus;
     va_list EventTextArgsPtr;
+    BPL_EVM_ProxyCallbacks_t const * EVM_API = BPL_EVM_GetAPI(this);
 
-    if (BPL_EVM_ProxyCallbacks.SendEvent_Impl == NULL)
+    if (BPL_EVM_IsValidAPI(EVM_API))
     {
         ReturnStatus.ReturnValue = BPL_STATUS_ERROR_PROXY_INIT;
     }
@@ -106,7 +175,7 @@ BPL_Status_t BPL_EVM_SendEvent(uint16_t EventID, BPL_EVM_EventType_t EventType,
     else
     {
         va_start(EventTextArgsPtr, EventText);
-        ProxyReturnStatus = BPL_EVM_ProxyCallbacks.SendEvent_Impl(EventID, EventType, EventText, EventTextArgsPtr);
+        ProxyReturnStatus = EVM_API->SendEvent_Impl(EventID, EventType, EventText, EventTextArgsPtr);
         va_end(EventTextArgsPtr);
 
         if (ProxyReturnStatus.ReturnValue != BPL_STATUS_SUCCESS)
@@ -124,11 +193,16 @@ BPL_Status_t BPL_EVM_SendEvent(uint16_t EventID, BPL_EVM_EventType_t EventType,
     return ReturnStatus;
 }
 
-void BPL_EVM_Deinitialize(void)
+void BPL_EVM_Deinitialize(bplib_mpool_t * this)
 {
-    /* Clear proxy function pointers */
-    BPL_EVM_ProxyCallbacks.Initialize_Impl = NULL;
-    BPL_EVM_ProxyCallbacks.SendEvent_Impl = NULL;
+    BPL_EVM_ProxyCallbacks_t * EVM_API = BPL_EVM_GetAPI(this);
+
+    if (BPL_EVM_IsValidAPI(EVM_API))
+    {
+        /* Clear proxy function pointers */
+        EVM_API->Initialize_Impl = NULL;
+        EVM_API->SendEvent_Impl = NULL;
+    }
 
     return;
 }
