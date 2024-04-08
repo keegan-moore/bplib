@@ -9,6 +9,7 @@
  INCLUDES
  ******************************************************************************/
 
+#include <stdarg.h>
 #include "bplib_api_types.h"
 
 /************************************************
@@ -46,7 +47,7 @@ typedef struct
  * Exported Functions
  ************************************************/
 
-BPL_Status_t BPL_EVM_Initialize(bplib_mpool_t * this, BPL_EVM_ProxyCallbacks_t ProxyCallbacks);
+BPL_Status_t BPL_EVM_Initialize(bplib_mpool_t * this, BPL_EVM_ProxyCallbacks_t * ProxyCallbacks);
 char const * BPL_EVM_EventTypeToString(BPL_EVM_EventType_t Type);
 BPL_Status_t BPL_EVM_SendEvent(bplib_mpool_t * this, uint16_t EventID, BPL_EVM_EventType_t EventType,
                                 char const * EventText, ...);
