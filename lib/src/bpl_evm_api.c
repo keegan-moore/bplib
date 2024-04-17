@@ -133,7 +133,7 @@ BPL_Status_t BPL_EVM_SendEvent(bplib_mpool_t * this, uint16_t EventID, BPL_EVM_E
     va_list EventTextArgsPtr;
     BPL_EVM_ProxyCallbacks_t const * EVM_API = BPL_EVM_GetAPI(this);
 
-    if (BPL_EVM_IsValidAPI(EVM_API))
+    if (BPL_EVM_IsValidAPI(EVM_API) == false)
     {
         ReturnStatus.ReturnValue = BPL_STATUS_ERROR_PROXY_INIT;
     }
