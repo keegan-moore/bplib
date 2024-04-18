@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "bplib_api_types.h"
+#include "bpl_evm_api.h"
 
 /*
  * Priority levels for pool buffers -
@@ -358,6 +359,16 @@ void bplib_mpool_init_secondary_link(bplib_mpool_block_t *base_block, bplib_mpoo
  * @retval NULL if the lblk pointer is not convertible to a content block
  */
 bplib_mpool_block_t *bplib_mpool_get_block_from_link(bplib_mpool_block_t *lblk);
+
+
+/*
+ * @brief Obtain the pointer to the EVM API from the admin block
+ *
+ * @param[in] lblk link structure, such as from a list traversal.  May be a secondary link.
+ * @return bplib_mpool_block_t* pointer to container block
+ * @retval NULL if the lblk pointer is not convertible to a content block
+*/
+BPL_EVM_ProxyCallbacks_t * bplib_mpool_get_evm_api(bplib_mpool_t * this);
 
 /**
  * @brief Gets the offset of the block user content section

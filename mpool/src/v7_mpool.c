@@ -157,6 +157,29 @@ bplib_mpool_block_t *bplib_mpool_get_block_from_link(bplib_mpool_block_t *lblk)
     return bblk;
 }
 
+
+/*
+** Helper function to find/return the EVM API Proxy Callback struct from inside the mempool
+*/
+BPL_EVM_ProxyCallbacks_t * bplib_mpool_get_evm_api(bplib_mpool_t * this)
+{
+    BPL_EVM_ProxyCallbacks_t * EVM_API;
+    if (this == NULL)
+    {
+        EVM_API = NULL;
+    }
+    else
+    {
+        /*
+        ** TODO: do we need to search throught the list,
+        **       or can we assume this is the admin block?
+        */
+        EVM_API = &this->admin_block.u.admin.evm_api;
+    }
+    return EVM_API;
+}
+
+
 /*----------------------------------------------------------------
  *
  * Function: bplib_mpool_get_block_content
